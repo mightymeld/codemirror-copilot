@@ -34,7 +34,7 @@ const InlineSuggestionState = StateField.define<{ suggestion: null | string }>({
   },
   update(previousValue, tr) {
     const inlineSuggestion = tr.effects.find((e) =>
-      e.is(InlineSuggestionEffect),
+      e.is(InlineSuggestionEffect)
     );
     if (tr.state.doc) {
       if (inlineSuggestion && tr.state.doc == inlineSuggestion.value.doc) {
@@ -127,7 +127,7 @@ class InlineSuggestionWidget extends WidgetType {
         view.state,
         suggestionText,
         view.state.selection.main.head,
-        view.state.selection.main.head,
+        view.state.selection.main.head
       ),
     });
     return true;
@@ -150,7 +150,7 @@ export const fetchSuggestion = ViewPlugin.fromClass(
       }
 
       const isAutocompleted = update.transactions.some((t) =>
-        t.isUserEvent("input.complete"),
+        t.isUserEvent("input.complete")
       );
       if (isAutocompleted) {
         return;
@@ -168,7 +168,7 @@ export const fetchSuggestion = ViewPlugin.fromClass(
       const config = update.view.state.facet(suggestionConfigFacet);
       if (!config.fetchFn) {
         console.error(
-          "Unexpected issue in codemirror-copilot: fetchFn was not configured",
+          "Unexpected issue in codemirror-copilot: fetchFn was not configured"
         );
         return;
       }
@@ -177,7 +177,7 @@ export const fetchSuggestion = ViewPlugin.fromClass(
         effects: InlineSuggestionEffect.of({ text: result, doc: doc }),
       });
     }
-  },
+  }
 );
 
 const renderInlineSuggestionPlugin = ViewPlugin.fromClass(
@@ -209,13 +209,13 @@ const renderInlineSuggestionPlugin = ViewPlugin.fromClass(
       // }
       this.decorations = inlineSuggestionDecoration(
         update.view,
-        suggestionText,
+        suggestionText
       );
     }
   },
   {
     decorations: (v) => v.decorations,
-  },
+  }
 );
 
 /**
@@ -240,36 +240,56 @@ const inlineSuggestionKeymap = Prec.highest(
             view.state,
             suggestionText,
             view.state.selection.main.head,
-            view.state.selection.main.head,
+            view.state.selection.main.head
           ),
         });
         return true;
       },
     },
-  ]),
+  ])
 );
 
 function insertCompletionText(
   state: EditorState,
   text: string,
   from: number,
-  to: number,
+  to: number
 ): TransactionSpec {
   return {
     ...state.changeByRange((range) => {
-      if (range == state.selection.main)
+      if (range == state.selection.main) {
+        // when there are closing brackets or similar after the cursor, remove them if they also appear in text
+        // (doing this because often a user types '[', the editor inserts the ']', and the
+        // AI also serves back a ']' in its response.
+
+        // number of chars we will remove
+        let nChars = 0;
+        const removableChars = ["]", "}", ")", ">", ";"];
+        for (var i = 0; i < text.length; i++) {
+          if (
+            removableChars.includes(text[i]) &&
+            text[i] === state.sliceDoc(to + nChars, to + nChars + 1)
+          ) {
+            nChars++;
+          }
+        }
         return {
-          changes: { from: from, to: to, insert: text },
+          changes: [
+            { from: from, to: to, insert: text },
+            { from: to, to: to + nChars },
+          ],
           range: EditorSelection.cursor(from + text.length),
         };
+      }
       const len = to - from;
       if (
         !range.empty ||
         (len &&
           state.sliceDoc(range.from - len, range.from) !=
             state.sliceDoc(from, to))
-      )
+      ) {
         return { range };
+      }
       return {
         changes: { from: range.from - len, to: range.from, insert: text },
         range: EditorSelection.cursor(range.from - len + text.length),
