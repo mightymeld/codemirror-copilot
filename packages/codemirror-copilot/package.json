@@ -1,5 +1,5 @@
 {
-  "name": "codemirror-copilot",
+  "name": "@mightymeld/codemirror-copilot",
   "description": "This CodeMirror extension lets you use GPT to autocomplete code in CodeMirror.",
   "license": "MIT",
   "version": "0.0.7",
