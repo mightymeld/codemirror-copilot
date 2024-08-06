@@ -282,7 +282,7 @@ function insertCompletionText(
 
         // number of chars we will remove
         let nChars = 0;
-        const removableChars = ["]", "}", ")", ">", ";"];
+        const removableChars = ["]", "}", ")", ">", ";", '"', "'"];
         for (var i = 0; i < text.length; i++) {
           if (
             removableChars.includes(text[i]) &&
