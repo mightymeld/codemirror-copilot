@@ -142,12 +142,24 @@ class InlineSuggestionWidget extends WidgetType {
  */
 export const fetchSuggestion = ViewPlugin.fromClass(
   class Plugin {
+    cancelSuggestion = false;
+
     async update(update: ViewUpdate) {
-      const doc = update.state.doc;
       // Only fetch if the document has changed
       if (!update.docChanged) {
+        // When the document has not changed but the selection has, we assume
+        // the user has moved the cursor position. Therefore we cancel the
+        // suggestion to avoid showing somewhere other than where it was
+        // triggered from.
+        if (update.selectionSet) {
+          this.cancelSuggestion = true;
+        }
         return;
       }
+
+      this.cancelSuggestion = false;
+
+      const doc = update.state.doc;
 
       const isAutocompleted = update.transactions.some((t) =>
         t.isUserEvent("input.complete")
@@ -155,6 +167,7 @@ export const fetchSuggestion = ViewPlugin.fromClass(
       if (isAutocompleted) {
         return;
       }
+
       //   for (const tr of update.transactions) {
       //     // Check the userEvent property of the transaction
       //     if (tr.isUserEvent("input.complete")) {
@@ -173,6 +186,11 @@ export const fetchSuggestion = ViewPlugin.fromClass(
         return;
       }
       const result = await config.fetchFn(update.state);
+
+      // Time has now passed since the request was made. Check if in the
+      // meantime we decided to cancel.
+      if (this.cancelSuggestion) return;
+
       update.view.dispatch({
         effects: InlineSuggestionEffect.of({ text: result, doc: doc }),
       });
